@@ -174,7 +174,8 @@ func Register(c *gin.Context) {
 		Password:    user.Password,
 		DisplayName: user.Username,
 		InviterId:   inviterId,
-		Role:        common.RoleCommonUser, // 明确设置角色为普通用户
+		Role:        common.RoleCommonUser,           // 明确设置角色为普通用户
+		Group:       common.DefaultGroupForNewUser,    // 使用可配置的默认分组
 	}
 	if common.EmailVerificationEnabled {
 		cleanUser.Email = user.Email

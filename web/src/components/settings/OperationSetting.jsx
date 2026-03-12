@@ -36,6 +36,7 @@ const OperationSetting = () => {
     PreConsumedQuota: 0,
     QuotaForInviter: 0,
     QuotaForInvitee: 0,
+    DefaultGroupForNewUser: '',
     'quota_setting.enable_free_model_pre_consume': true,
 
     /* 通用设置 */
@@ -63,6 +64,7 @@ const OperationSetting = () => {
 
     /* 日志设置 */
     LogConsumeEnabled: false,
+    LogUpstreamRequestEnabled: false,
 
     /* 监控设置 */
     ChannelDisableThreshold: 0,

@@ -36,6 +36,7 @@ export default function SettingsCreditLimit(props) {
     PreConsumedQuota: '',
     QuotaForInviter: '',
     QuotaForInvitee: '',
+    DefaultGroupForNewUser: '',
     'quota_setting.enable_free_model_pre_consume': true,
   });
   const refForm = useRef();
@@ -109,6 +110,20 @@ export default function SettingsCreditLimit(props) {
                     setInputs({
                       ...inputs,
                       QuotaForNewUser: String(value),
+                    })
+                  }
+                />
+              </Col>
+              <Col xs={24} sm={12} md={8} lg={8} xl={8}>
+                <Form.Input
+                  label={t('新用户默认分组')}
+                  field={'DefaultGroupForNewUser'}
+                  placeholder={'default'}
+                  extraText={t('注册时自动分配的用户分组')}
+                  onChange={(value) =>
+                    setInputs({
+                      ...inputs,
+                      DefaultGroupForNewUser: value,
                     })
                   }
                 />
