@@ -2,6 +2,7 @@ package relay
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -19,6 +20,7 @@ import (
 	"github.com/QuantumNous/new-api/types"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 func ClaudeHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *types.NewAPIError) {
@@ -109,6 +111,11 @@ func ClaudeHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *typ
 		}
 	}
 
+	// 为 Anthropic Claude 渠道注入 Claude Code metadata
+	if info.ChannelType == constant.ChannelTypeAnthropic {
+		InjectClaudeCodeMetadata(request, info.UserId)
+	}
+
 	if !model_setting.GetGlobalSettings().PassThroughRequestEnabled &&
 		!info.ChannelSetting.PassThroughBodyEnabled &&
 		service.ShouldChatCompletionsUseResponsesGlobal(info.ChannelId, info.ChannelType, info.OriginModelName) {
@@ -192,4 +199,21 @@ func ClaudeHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *typ
 
 	service.PostClaudeConsumeQuota(c, info, usage.(*dto.Usage))
 	return nil
+}
+
+// InjectClaudeCodeMetadata 为 Anthropic Claude 请求注入 metadata
+func InjectClaudeCodeMetadata(request *dto.ClaudeRequest, userId int) {
+	if len(request.Metadata) == 0 {
+		request.Metadata = json.RawMessage(fmt.Sprintf(`{"user_id":"%s"}`, generateClaudeCodeUserId(userId)))
+	}
+}
+
+var claudeCodeUUIDNamespace = uuid.MustParse("a1b2c3d4-e5f6-7890-abcd-ef0123456789")
+
+func generateClaudeCodeUserId(userId int) string {
+	hash := sha256.Sum256([]byte(fmt.Sprintf("claude-code-user-%d", userId)))
+	hex64 := fmt.Sprintf("%x", hash[:])
+	accountUUID := uuid.NewSHA1(claudeCodeUUIDNamespace, []byte(fmt.Sprintf("account_%d", userId)))
+	sessionUUID := uuid.NewSHA1(claudeCodeUUIDNamespace, []byte(fmt.Sprintf("session_%d", userId)))
+	return fmt.Sprintf("user_%s_account_%s_session_%s", hex64, accountUUID, sessionUUID)
 }

@@ -366,6 +366,14 @@ func testChannel(channel *model.Channel, testModel string, endpointType string, 
 			newAPIError: types.NewError(err, types.ErrorCodeConvertRequestFailed),
 		}
 	}
+
+	// 为 Anthropic Claude 渠道注入 Claude Code system 消息
+	if channel.Type == constant.ChannelTypeAnthropic {
+		if claudeReq, ok := convertedRequest.(*dto.ClaudeRequest); ok {
+			relay.InjectClaudeCodeMetadata(claudeReq, info.UserId)
+		}
+	}
+
 	jsonData, err := common.Marshal(convertedRequest)
 	if err != nil {
 		return testResult{
