@@ -881,6 +881,8 @@
     "启用请求透传": "Enable request pass-through",
     "启用违规扣费": "Enable violation deduction",
     "启用额度消费日志记录": "Enable quota consumption logging",
+    "记录上游请求详情": "Log Upstream Request Details",
+    "开启后将在日志中记录发送到上游渠道的完整请求信息（URL、Headers、Body）": "When enabled, logs full request details (URL, Headers, Body) sent to upstream channels",
     "启用验证": "Enable Authentication",
     "周": "week",
     "命中判定：usage 中存在 cached tokens（例如 cached_tokens/prompt_cache_hit_tokens）即视为命中。": "",

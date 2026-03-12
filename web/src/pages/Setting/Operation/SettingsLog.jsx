@@ -46,6 +46,7 @@ export default function SettingsLog(props) {
   const [loadingCleanHistoryLog, setLoadingCleanHistoryLog] = useState(false);
   const [inputs, setInputs] = useState({
     LogConsumeEnabled: false,
+    LogUpstreamRequestEnabled: false,
     historyTimestamp: dayjs().subtract(1, 'month').toDate(),
   });
   const refForm = useRef();
@@ -214,6 +215,24 @@ export default function SettingsLog(props) {
                       LogConsumeEnabled: value,
                     });
                   }}
+                />
+              </Col>
+              <Col xs={24} sm={12} md={8} lg={8} xl={8}>
+                <Form.Switch
+                  field={'LogUpstreamRequestEnabled'}
+                  label={t('记录上游请求详情')}
+                  size='default'
+                  checkedText='｜'
+                  uncheckedText='〇'
+                  onChange={(value) => {
+                    setInputs({
+                      ...inputs,
+                      LogUpstreamRequestEnabled: value,
+                    });
+                  }}
+                  extraText={t(
+                    '开启后将在日志中记录发送到上游渠道的完整请求信息（URL、Headers、Body）',
+                  )}
                 />
               </Col>
               <Col xs={24} sm={12} md={8} lg={8} xl={8}>

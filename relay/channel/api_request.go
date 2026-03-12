@@ -1,6 +1,7 @@
 package channel
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -287,6 +288,89 @@ func applyHeaderOverrideToRequest(req *http.Request, headerOverride map[string]s
 	}
 }
 
+var sensitiveHeaderNames = map[string]bool{
+	"authorization":  true,
+	"api-key":        true,
+	"x-api-key":      true,
+	"x-goog-api-key": true,
+}
+
+func maskSensitiveValue(value string) string {
+	if len(value) <= 8 {
+		return "****"
+	}
+	return value[:4] + "****" + value[len(value)-4:]
+}
+
+const logUpstreamBodyMaxBytes = 4096
+
+func logUpstreamRequest(c *gin.Context, req *http.Request, info *common.RelayInfo) {
+	if !common2.LogUpstreamRequestEnabled {
+		return
+	}
+
+	channelID := 0
+	if info != nil {
+		channelID = info.ChannelId
+	}
+
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("\n===== Upstream Request [Channel:%d] =====\n", channelID))
+	sb.WriteString(fmt.Sprintf("%s %s\n", req.Method, req.URL.String()))
+
+	sb.WriteString("--- Headers ---\n")
+	for name, values := range req.Header {
+		val := strings.Join(values, ", ")
+		if sensitiveHeaderNames[strings.ToLower(name)] {
+			val = maskSensitiveValue(val)
+		}
+		sb.WriteString(fmt.Sprintf("  %s: %s\n", name, val))
+	}
+
+	if req.Body != nil && req.Body != http.NoBody {
+		bodyBytes, err := io.ReadAll(req.Body)
+		if err == nil {
+			req.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
+			sb.WriteString("--- Body ---\n")
+			if len(bodyBytes) > logUpstreamBodyMaxBytes {
+				sb.WriteString(fmt.Sprintf("  %s... (truncated, total %d bytes)\n", string(bodyBytes[:logUpstreamBodyMaxBytes]), len(bodyBytes)))
+			} else {
+				sb.WriteString(fmt.Sprintf("  %s\n", string(bodyBytes)))
+			}
+		}
+	}
+
+	sb.WriteString("==========================================")
+	logger.LogInfo(c, sb.String())
+}
+
+func logUpstreamWssRequest(c *gin.Context, url string, headers http.Header, info *common.RelayInfo) {
+	if !common2.LogUpstreamRequestEnabled {
+		return
+	}
+
+	channelID := 0
+	if info != nil {
+		channelID = info.ChannelId
+	}
+
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("\n===== Upstream WSS Request [Channel:%d] =====\n", channelID))
+	sb.WriteString(fmt.Sprintf("WSS %s\n", url))
+
+	sb.WriteString("--- Headers ---\n")
+	for name, values := range headers {
+		val := strings.Join(values, ", ")
+		if sensitiveHeaderNames[strings.ToLower(name)] {
+			val = maskSensitiveValue(val)
+		}
+		sb.WriteString(fmt.Sprintf("  %s: %s\n", name, val))
+	}
+
+	sb.WriteString("==========================================")
+	logger.LogInfo(c, sb.String())
+}
+
 func DoApiRequest(a Adaptor, c *gin.Context, info *common.RelayInfo, requestBody io.Reader) (*http.Response, error) {
 	fullRequestURL, err := a.GetRequestURL(info)
 	if err != nil {
@@ -311,6 +395,7 @@ func DoApiRequest(a Adaptor, c *gin.Context, info *common.RelayInfo, requestBody
 		return nil, err
 	}
 	applyHeaderOverrideToRequest(req, headerOverride)
+	logUpstreamRequest(c, req, info)
 	resp, err := doRequest(c, req, info)
 	if err != nil {
 		return nil, fmt.Errorf("do request failed: %w", err)
@@ -344,6 +429,7 @@ func DoFormRequest(a Adaptor, c *gin.Context, info *common.RelayInfo, requestBod
 		return nil, err
 	}
 	applyHeaderOverrideToRequest(req, headerOverride)
+	logUpstreamRequest(c, req, info)
 	resp, err := doRequest(c, req, info)
 	if err != nil {
 		return nil, fmt.Errorf("do request failed: %w", err)
@@ -371,6 +457,7 @@ func DoWssRequest(a Adaptor, c *gin.Context, info *common.RelayInfo, requestBody
 		targetHeader.Set(key, value)
 	}
 	targetHeader.Set("Content-Type", c.Request.Header.Get("Content-Type"))
+	logUpstreamWssRequest(c, fullRequestURL, targetHeader, info)
 	targetConn, _, err := websocket.DefaultDialer.Dial(fullRequestURL, targetHeader)
 	if err != nil {
 		return nil, fmt.Errorf("dial failed to %s: %w", fullRequestURL, err)
@@ -546,6 +633,7 @@ func DoTaskApiRequest(a TaskAdaptor, c *gin.Context, info *common.RelayInfo, req
 	if err != nil {
 		return nil, fmt.Errorf("setup request header failed: %w", err)
 	}
+	logUpstreamRequest(c, req, info)
 	resp, err := doRequest(c, req, info)
 	if err != nil {
 		return nil, fmt.Errorf("do request failed: %w", err)
