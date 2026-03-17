@@ -209,7 +209,7 @@ func InjectClaudeCodeMetadata(request *dto.ClaudeRequest, userId int) {
 	claudeCodeSystem := []dto.ClaudeMediaMessage{
 		{
 			Type: dto.ContentTypeText,
-			Text: common.GetPointer[string]("x-anthropic-billing-header: cc_version=2.1.76.4d1; cc_entrypoint=cli"),
+			Text: common.GetPointer[string]("x-anthropic-billing-header: cc_version=2.1.76.4d1; cc_entrypoint=cli; cch=350f3;"),
 		},
 		{
 			Type:         dto.ContentTypeText,
