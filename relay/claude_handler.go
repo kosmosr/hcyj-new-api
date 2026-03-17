@@ -240,12 +240,13 @@ func InjectClaudeCodeMetadata(request *dto.ClaudeRequest, userId int) {
 }
 
 func generateClaudeCodeUserId(userId int) string {
+	return "user_5715bfbc3644f1da3ee2a5b1397460b04a00e8d468930761bd0a101ce7c20016_account__session_42d95919-79bd-494d-9463-0b2a32cf72cd"
 	//return fmt.Sprintf("user_5715bfbc3644f1da3ee2a5b1397460b04a00e8d468930761bd0a101ce7c20016_account__session_42d95919-79bd-494d-9463-0b2a32cf72cd")
 	//hash := sha256.Sum256([]byte(fmt.Sprintf("claude-code-user-%d", userId)))
 	//hex64 := fmt.Sprintf("%x", hash[:])
-	hex64 := "5715bfbc3644f1da3ee2a5b1397460b04a00e8d468930761bd0a101ce7c20016"
-	sessionUUID := deterministicUUIDv4(fmt.Sprintf("session_%d", userId))
-	return fmt.Sprintf("user_%s_account__session_%s", hex64, sessionUUID)
+	//hex64 := "5715bfbc3644f1da3ee2a5b1397460b04a00e8d468930761bd0a101ce7c20016"
+	//sessionUUID := deterministicUUIDv4(fmt.Sprintf("session_%d", userId))
+	//return fmt.Sprintf("user_%s_account__session_%s", hex64, sessionUUID)
 }
 
 // deterministicUUIDv4 基于输入字符串生成确定性的 UUID v4 格式字符串
