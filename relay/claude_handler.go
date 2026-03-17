@@ -201,10 +201,42 @@ func ClaudeHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *typ
 	return nil
 }
 
-// InjectClaudeCodeMetadata 为 Anthropic Claude 请求注入 metadata
+// InjectClaudeCodeMetadata 为 Anthropic Claude 请求注入 metadata 和 system 消息
 func InjectClaudeCodeMetadata(request *dto.ClaudeRequest, userId int) {
 	if len(request.Metadata) == 0 {
 		request.Metadata = json.RawMessage(fmt.Sprintf(`{"user_id":"%s"}`, generateClaudeCodeUserId(userId)))
+	}
+
+	claudeCodeSystem := []dto.ClaudeMediaMessage{
+		{
+			Type: dto.ContentTypeText,
+			Text: common.GetPointer[string]("x-anthropic-billing-header: cc_version=2.1.76.4d1; cc_entrypoint=cli"),
+		},
+		{
+			Type:         dto.ContentTypeText,
+			Text:         common.GetPointer[string]("You are Claude Code, Anthropic's official CLI for Claude."),
+			CacheControl: json.RawMessage(`{"type":"ephemeral"}`),
+		},
+	}
+
+	if request.System == nil {
+		request.System = claudeCodeSystem
+	} else if request.IsStringSystem() {
+		existing := strings.TrimSpace(request.GetStringSystem())
+		if existing == "" {
+			request.System = claudeCodeSystem
+		} else {
+			existingMsg := dto.ClaudeMediaMessage{Type: dto.ContentTypeText}
+			existingMsg.SetText(existing)
+			request.System = append(claudeCodeSystem, existingMsg)
+		}
+	} else {
+		existingSystem := request.ParseSystem()
+		if len(existingSystem) == 0 {
+			request.System = claudeCodeSystem
+		} else {
+			request.System = append(claudeCodeSystem, existingSystem...)
+		}
 	}
 }
 
