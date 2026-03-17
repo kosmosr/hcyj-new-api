@@ -20,7 +20,6 @@ import (
 	"github.com/QuantumNous/new-api/types"
 
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 )
 
 func ClaudeHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *types.NewAPIError) {
@@ -240,12 +239,20 @@ func InjectClaudeCodeMetadata(request *dto.ClaudeRequest, userId int) {
 	}
 }
 
-var claudeCodeUUIDNamespace = uuid.MustParse("a1b2c3d4-e5f6-7890-abcd-ef0123456789")
-
 func generateClaudeCodeUserId(userId int) string {
 	hash := sha256.Sum256([]byte(fmt.Sprintf("claude-code-user-%d", userId)))
 	hex64 := fmt.Sprintf("%x", hash[:])
-	accountUUID := uuid.NewSHA1(claudeCodeUUIDNamespace, []byte(fmt.Sprintf("account_%d", userId)))
-	sessionUUID := uuid.NewSHA1(claudeCodeUUIDNamespace, []byte(fmt.Sprintf("session_%d", userId)))
+	accountUUID := deterministicUUIDv4(fmt.Sprintf("account_%d", userId))
+	sessionUUID := deterministicUUIDv4(fmt.Sprintf("session_%d", userId))
 	return fmt.Sprintf("user_%s_account_%s_session_%s", hex64, accountUUID, sessionUUID)
+}
+
+// deterministicUUIDv4 基于输入字符串生成确定性的 UUID v4 格式字符串
+func deterministicUUIDv4(input string) string {
+	h := sha256.Sum256([]byte(input))
+	// version 4: h[6] 高4位设为 0100
+	h[6] = (h[6] & 0x0f) | 0x40
+	// variant RFC 4122: h[8] 高2位设为 10
+	h[8] = (h[8] & 0x3f) | 0x80
+	return fmt.Sprintf("%x-%x-%x-%x-%x", h[0:4], h[4:6], h[6:8], h[8:10], h[10:16])
 }
