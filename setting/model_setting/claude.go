@@ -18,6 +18,7 @@ type ClaudeSettings struct {
 	DefaultMaxTokens                      map[string]int                 `json:"default_max_tokens"`
 	ThinkingAdapterEnabled                bool                           `json:"thinking_adapter_enabled"`
 	ThinkingAdapterBudgetTokensPercentage float64                        `json:"thinking_adapter_budget_tokens_percentage"`
+	ClaudeCodeVersion                     string                         `json:"claude_code_version"`
 }
 
 // 默认配置
@@ -28,6 +29,7 @@ var defaultClaudeSettings = ClaudeSettings{
 		"default": 8192,
 	},
 	ThinkingAdapterBudgetTokensPercentage: 0.8,
+	ClaudeCodeVersion:                     "2.1.81",
 }
 
 // 全局实例
@@ -72,4 +74,11 @@ func (c *ClaudeSettings) GetDefaultMaxTokens(model string) int {
 		return maxTokens
 	}
 	return c.DefaultMaxTokens["default"]
+}
+
+func (c *ClaudeSettings) GetClaudeCodeVersion() string {
+	if c.ClaudeCodeVersion == "" {
+		return "2.1.81"
+	}
+	return c.ClaudeCodeVersion
 }

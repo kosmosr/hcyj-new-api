@@ -112,7 +112,7 @@ func ClaudeHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *typ
 
 	// 为 Anthropic Claude 渠道注入 Claude Code metadata
 	if info.ChannelType == constant.ChannelTypeAnthropic {
-		InjectClaudeCodeMetadata(request, info.UserId)
+		InjectClaudeCodeBody(request, info.UserId)
 	}
 
 	if !model_setting.GetGlobalSettings().PassThroughRequestEnabled &&
@@ -164,6 +164,12 @@ func ClaudeHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *typ
 			}
 		}
 
+		// 为 Anthropic 渠道计算并替换 CCH
+		if info.ChannelType == constant.ChannelTypeAnthropic {
+			jsonData = computeAndReplaceCCH(jsonData,
+				model_setting.GetClaudeSettings().GetClaudeCodeVersion())
+		}
+
 		if common.DebugEnabled {
 			println("requestBody: ", string(jsonData))
 		}
@@ -198,55 +204,6 @@ func ClaudeHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *typ
 
 	service.PostClaudeConsumeQuota(c, info, usage.(*dto.Usage))
 	return nil
-}
-
-// InjectClaudeCodeMetadata 为 Anthropic Claude 请求注入 metadata 和 system 消息
-func InjectClaudeCodeMetadata(request *dto.ClaudeRequest, userId int) {
-	if len(request.Metadata) == 0 {
-		request.Metadata = json.RawMessage(fmt.Sprintf(`{"user_id":"%s"}`, generateClaudeCodeUserId(userId)))
-	}
-
-	claudeCodeSystem := []dto.ClaudeMediaMessage{
-		{
-			Type: dto.ContentTypeText,
-			Text: common.GetPointer[string]("x-anthropic-billing-header: cc_version=2.1.76.4d1; cc_entrypoint=cli; cch=350f3;"),
-		},
-		{
-			Type:         dto.ContentTypeText,
-			Text:         common.GetPointer[string]("You are Claude Code, Anthropic's official CLI for Claude."),
-			CacheControl: json.RawMessage(`{"type":"ephemeral"}`),
-		},
-	}
-
-	if request.System == nil {
-		request.System = claudeCodeSystem
-	} else if request.IsStringSystem() {
-		existing := strings.TrimSpace(request.GetStringSystem())
-		if existing == "" {
-			request.System = claudeCodeSystem
-		} else {
-			existingMsg := dto.ClaudeMediaMessage{Type: dto.ContentTypeText}
-			existingMsg.SetText(existing)
-			request.System = append(claudeCodeSystem, existingMsg)
-		}
-	} else {
-		existingSystem := request.ParseSystem()
-		if len(existingSystem) == 0 {
-			request.System = claudeCodeSystem
-		} else {
-			request.System = append(claudeCodeSystem, existingSystem...)
-		}
-	}
-}
-
-func generateClaudeCodeUserId(userId int) string {
-	return "user_5715bfbc3644f1da3ee2a5b1397460b04a00e8d468930761bd0a101ce7c20016_account__session_42d95919-79bd-494d-9463-0b2a32cf72cd"
-	//return fmt.Sprintf("user_5715bfbc3644f1da3ee2a5b1397460b04a00e8d468930761bd0a101ce7c20016_account__session_42d95919-79bd-494d-9463-0b2a32cf72cd")
-	//hash := sha256.Sum256([]byte(fmt.Sprintf("claude-code-user-%d", userId)))
-	//hex64 := fmt.Sprintf("%x", hash[:])
-	//hex64 := "5715bfbc3644f1da3ee2a5b1397460b04a00e8d468930761bd0a101ce7c20016"
-	//sessionUUID := deterministicUUIDv4(fmt.Sprintf("session_%d", userId))
-	//return fmt.Sprintf("user_%s_account__session_%s", hex64, sessionUUID)
 }
 
 // deterministicUUIDv4 基于输入字符串生成确定性的 UUID v4 格式字符串

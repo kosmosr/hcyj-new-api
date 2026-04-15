@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/QuantumNous/new-api/constant"
 	"github.com/QuantumNous/new-api/dto"
 	"github.com/QuantumNous/new-api/relay/channel"
 	relaycommon "github.com/QuantumNous/new-api/relay/common"
@@ -65,7 +66,15 @@ func (a *Adaptor) SetupRequestHeader(c *gin.Context, req *http.Header, info *rel
 		anthropicVersion = "2023-06-01"
 	}
 	req.Set("anthropic-version", anthropicVersion)
-	CommonClaudeHeadersOperation(c, req, info)
+
+	// 对 Anthropic 直连渠道注入 Claude Code 特征头
+	if info.ChannelType == constant.ChannelTypeAnthropic {
+		InjectClaudeCodeHeaders(c, req, info)
+	} else {
+		// 非 Anthropic 渠道（AWS Bedrock 等）保持原有行为
+		CommonClaudeHeadersOperation(c, req, info)
+	}
+
 	return nil
 }
 
